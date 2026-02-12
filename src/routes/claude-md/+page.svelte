@@ -2,6 +2,7 @@
   import { onMount } from "svelte";
   import { listProjects, type ProjectInfo } from "$lib/commands/projects";
   import { readClaudeMd, writeClaudeMd } from "$lib/commands/claude-md";
+  import { onFileChange } from "$lib/commands/watcher";
   import MarkdownEditor from "$lib/components/MarkdownEditor.svelte";
   import ScopeTabBar from "$lib/components/ScopeTabBar.svelte";
   import { Save } from "lucide-svelte";
@@ -58,13 +59,21 @@
     }
   }
 
-  onMount(async () => {
-    try {
-      projects = await listProjects();
-    } catch (_) {
-      // projects list is non-critical
-    }
-    await loadContent(activeScope);
+  onMount(() => {
+    let unlisten: (() => void) | undefined;
+
+    (async () => {
+      try {
+        projects = await listProjects();
+      } catch (_) {}
+      await loadContent(activeScope);
+
+      unlisten = await onFileChange("claude-md-changed", () => {
+        loadContent(activeScope);
+      });
+    })();
+
+    return () => unlisten?.();
   });
 </script>
 

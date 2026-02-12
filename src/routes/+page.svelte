@@ -3,7 +3,7 @@
   import { listProjects, type ProjectInfo } from "$lib/commands/projects";
   import { listConversations, type ConversationMeta } from "$lib/commands/history";
   import { listEntities } from "$lib/commands/entities";
-  import { startWatching } from "$lib/commands/watcher";
+  import { startWatching, onFileChange } from "$lib/commands/watcher";
   import {
     FolderOpen,
     MessageSquare,
@@ -38,27 +38,57 @@
     return encoded.substring(1).replace(/-/g, "/");
   }
 
-  onMount(async () => {
+  onMount(() => {
+    let unlisteners: (() => void)[] = [];
+
     startWatching().catch(() => {});
 
-    try {
-      const [p, c, agents, rules, commands, skills, hooks] = await Promise.all([
-        listProjects(),
-        listConversations(),
-        listEntities("agents"),
-        listEntities("rules"),
-        listEntities("commands"),
-        listEntities("skills"),
-        listEntities("hooks"),
+    (async () => {
+      try {
+        const [p, c, agents, rules, commands, skills, hooks] = await Promise.all([
+          listProjects(),
+          listConversations(),
+          listEntities("agents"),
+          listEntities("rules"),
+          listEntities("commands"),
+          listEntities("skills"),
+          listEntities("hooks"),
+        ]);
+        projects = p;
+        recentConversations = c.slice(0, 5);
+        entityCount = agents.length + rules.length + commands.length + skills.length + hooks.length;
+      } catch (e) {
+        error = String(e);
+      } finally {
+        loading = false;
+      }
+
+      const loadAll = async () => {
+        try {
+          const [p, c, agents, rules, cmds, skills, hooks] = await Promise.all([
+            listProjects(),
+            listConversations(),
+            listEntities("agents"),
+            listEntities("rules"),
+            listEntities("commands"),
+            listEntities("skills"),
+            listEntities("hooks"),
+          ]);
+          projects = p;
+          recentConversations = c.slice(0, 5);
+          entityCount = agents.length + rules.length + cmds.length + skills.length + hooks.length;
+        } catch {}
+      };
+
+      unlisteners = await Promise.all([
+        onFileChange("claude-md-changed", loadAll),
+        onFileChange("settings-changed", loadAll),
+        onFileChange("entity-changed", loadAll),
+        onFileChange("history-changed", loadAll),
       ]);
-      projects = p;
-      recentConversations = c.slice(0, 5);
-      entityCount = agents.length + rules.length + commands.length + skills.length + hooks.length;
-    } catch (e) {
-      error = String(e);
-    } finally {
-      loading = false;
-    }
+    })();
+
+    return () => unlisteners.forEach((fn) => fn());
   });
 
   interface StatCard {

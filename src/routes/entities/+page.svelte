@@ -9,6 +9,8 @@
     type EntityInfo,
     type EntityDetail,
   } from "$lib/commands/entities";
+  import { onFileChange } from "$lib/commands/watcher";
+  import { getTemplate } from "$lib/templates/entity-templates";
   import CodeMirrorEditor from "$lib/components/CodeMirrorEditor.svelte";
   import { Plus, Trash2, ArrowLeft, Save, Globe, FolderOpen } from "lucide-svelte";
 
@@ -109,7 +111,9 @@
   async function handleCreate(): Promise<void> {
     const trimmed = newName.trim();
     if (!trimmed) return;
-    await writeEntity(activeType, "global", trimmed, `---\nname: ${trimmed}\ndescription: \n---\n`);
+    const template = getTemplate(activeType);
+    const content = template.replace(/^(name: )$/m, `name: ${trimmed}`);
+    await writeEntity(activeType, "global", trimmed, content);
     newName = "";
     creating = false;
     await loadEntities();
@@ -134,7 +138,16 @@
     }
   }
 
-  onMount(() => loadEntities());
+  onMount(() => {
+    let unlisten: (() => void) | undefined;
+
+    (async () => {
+      await loadEntities();
+      unlisten = await onFileChange("entity-changed", () => loadEntities());
+    })();
+
+    return () => unlisten?.();
+  });
 </script>
 
 <svelte:window onkeydown={handleKeydown} />

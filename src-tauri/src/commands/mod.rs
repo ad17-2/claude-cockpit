@@ -1,6 +1,9 @@
 pub mod claude_md;
 pub mod entities;
 pub mod history;
+pub mod mcp;
 pub mod projects;
+pub mod sessions;
 pub mod settings;
+pub mod usage;
 pub mod watcher;

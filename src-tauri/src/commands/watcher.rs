@@ -1,8 +1,9 @@
 use notify::RecursiveMode;
 use notify_debouncer_mini::new_debouncer;
-use std::path::Path;
+use std::collections::HashMap;
+use std::path::{Path, PathBuf};
 use std::sync::OnceLock;
-use std::time::Duration;
+use std::time::{Duration, Instant};
 use tauri::{AppHandle, Emitter};
 
 static WATCHER_STARTED: OnceLock<()> = OnceLock::new();
@@ -62,8 +63,11 @@ pub fn start_watching(app: AppHandle) -> Result<(), String> {
             return;
         }
 
+        let mut active_sessions: HashMap<PathBuf, Instant> = HashMap::new();
+        let session_timeout = Duration::from_secs(60);
+
         loop {
-            match rx.recv() {
+            match rx.recv_timeout(Duration::from_secs(10)) {
                 Ok(Ok(events)) => {
                     let mut emitted = std::collections::HashSet::new();
                     for event in &events {
@@ -72,12 +76,34 @@ pub fn start_watching(app: AppHandle) -> Result<(), String> {
                                 let _ = app_handle.emit(event_name, ());
                             }
                         }
+
+                        if event.path.extension().and_then(|e| e.to_str()) == Some("jsonl") {
+                            active_sessions.insert(event.path.clone(), Instant::now());
+                        }
                     }
                 }
                 Ok(Err(e)) => {
                     eprintln!("Watch error: {}", e);
                 }
-                Err(_) => break,
+                Err(std::sync::mpsc::RecvTimeoutError::Timeout) => {}
+                Err(std::sync::mpsc::RecvTimeoutError::Disconnected) => break,
+            }
+
+            let now = Instant::now();
+            let completed: Vec<PathBuf> = active_sessions
+                .iter()
+                .filter(|(_, last_seen)| now.duration_since(**last_seen) > session_timeout)
+                .map(|(path, _)| path.clone())
+                .collect();
+
+            for path in completed {
+                active_sessions.remove(&path);
+                let session_id = path
+                    .file_stem()
+                    .and_then(|s| s.to_str())
+                    .unwrap_or("")
+                    .to_string();
+                let _ = app_handle.emit("session-completed", session_id);
             }
         }
     });
