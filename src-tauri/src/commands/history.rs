@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::fs;
-use std::io::{BufRead, BufReader};
+use std::io::{BufRead, BufReader, Write};
 use std::path::{Path, PathBuf};
 
 use super::utils;
@@ -55,16 +55,7 @@ pub fn list_conversations(project_filter: Option<String>) -> Result<Vec<Conversa
         }
 
         let project_path = project_entry.path();
-        let jsonl_files: Vec<_> = fs::read_dir(&project_path)
-            .map_err(|e| e.to_string())?
-            .filter_map(|e| e.ok())
-            .filter(|e| {
-                e.path()
-                    .extension()
-                    .and_then(|ext| ext.to_str())
-                    == Some("jsonl")
-            })
-            .collect();
+        let jsonl_files = utils::list_jsonl_files(&project_path)?;
 
         for file_entry in jsonl_files {
             let file_path = file_entry.path();
@@ -217,16 +208,7 @@ pub fn search_conversations(query: String, max_results: Option<u32>) -> Result<V
         let project_name = project_entry.file_name().to_string_lossy().to_string();
         let project_path = project_entry.path();
 
-        let jsonl_files: Vec<_> = fs::read_dir(&project_path)
-            .map_err(|e| e.to_string())?
-            .filter_map(|e| e.ok())
-            .filter(|e| {
-                e.path()
-                    .extension()
-                    .and_then(|ext| ext.to_str())
-                    == Some("jsonl")
-            })
-            .collect();
+        let jsonl_files = utils::list_jsonl_files(&project_path)?;
 
         for file_entry in jsonl_files {
             let file_path = file_entry.path();
@@ -285,19 +267,20 @@ pub fn search_conversations(query: String, max_results: Option<u32>) -> Result<V
     Ok(results)
 }
 
-#[tauri::command]
-pub fn delete_conversation(session_path: String) -> Result<(), String> {
-    let path = PathBuf::from(&session_path);
+fn remove_session(path: &Path) -> Result<(), String> {
     if path.exists() {
-        fs::remove_file(&path).map_err(|e| e.to_string())?;
+        fs::remove_file(path).map_err(|e| e.to_string())?;
     }
-
     let session_dir = path.with_extension("");
     if session_dir.is_dir() {
         fs::remove_dir_all(&session_dir).map_err(|e| e.to_string())?;
     }
-
     Ok(())
+}
+
+#[tauri::command]
+pub fn delete_conversation(session_path: String) -> Result<(), String> {
+    remove_session(&PathBuf::from(&session_path))
 }
 
 #[tauri::command]
@@ -322,4 +305,71 @@ pub fn read_command_history(limit: Option<u32>) -> Result<Vec<HistoryEntry>, Str
     entries.truncate(max);
 
     Ok(entries)
+}
+
+#[tauri::command]
+pub fn delete_command_entry(timestamp: u64) -> Result<(), String> {
+    let path = utils::claude_dir().join("history.jsonl");
+    if !path.exists() {
+        return Ok(());
+    }
+
+    let file = fs::File::open(&path).map_err(|e| e.to_string())?;
+    let reader = BufReader::new(file);
+
+    let remaining: Vec<String> = reader
+        .lines()
+        .filter_map(|line| line.ok())
+        .filter(|line| {
+            if line.trim().is_empty() {
+                return false;
+            }
+            match serde_json::from_str::<HistoryEntry>(line) {
+                Ok(entry) => entry.timestamp != timestamp,
+                Err(_) => true,
+            }
+        })
+        .collect();
+
+    let mut file = fs::File::create(&path).map_err(|e| e.to_string())?;
+    for line in &remaining {
+        writeln!(file, "{}", line).map_err(|e| e.to_string())?;
+    }
+
+    Ok(())
+}
+
+#[tauri::command]
+pub fn clear_command_history() -> Result<(), String> {
+    let path = utils::claude_dir().join("history.jsonl");
+    if path.exists() {
+        fs::write(&path, "").map_err(|e| e.to_string())?;
+    }
+    Ok(())
+}
+
+#[tauri::command]
+pub fn clear_all_conversations(project_filter: Option<String>) -> Result<u32, String> {
+    let project_dirs = utils::list_project_dirs()?;
+    let mut count: u32 = 0;
+
+    for project_entry in project_dirs {
+        let project_name = project_entry.file_name().to_string_lossy().to_string();
+
+        if let Some(ref filter) = project_filter {
+            if !project_name.contains(filter.as_str()) {
+                continue;
+            }
+        }
+
+        let project_path = project_entry.path();
+        let jsonl_files = utils::list_jsonl_files(&project_path)?;
+
+        for file_entry in jsonl_files {
+            remove_session(&file_entry.path())?;
+            count += 1;
+        }
+    }
+
+    Ok(count)
 }

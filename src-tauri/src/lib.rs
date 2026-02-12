@@ -11,6 +11,7 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             projects::list_projects,
             projects::decode_project_path,
+            projects::delete_project,
             claude_md::read_claude_md,
             claude_md::write_claude_md,
             settings::read_settings,
@@ -27,6 +28,9 @@ pub fn run() {
             history::search_conversations,
             history::delete_conversation,
             history::read_command_history,
+            history::delete_command_entry,
+            history::clear_command_history,
+            history::clear_all_conversations,
             watcher::start_watching,
             sessions::list_active_sessions,
             sessions::tail_session,

@@ -1,31 +1,42 @@
 import { invoke } from "$lib/tauri";
 
 export interface StatsCache {
-  daily_stats?: Record<string, DayStat>;
-  model_usage?: Record<string, ModelUsage>;
-  hourly_activity?: number[];
-  total_sessions?: number;
-  total_messages?: number;
-  total_tokens?: number;
-  days_active?: number;
-  longest_session?: {
-    duration_mins: number;
-    message_count: number;
-    date: string;
-  };
+  version: number;
+  lastComputedDate: string;
+  dailyActivity: DayActivity[];
+  dailyModelTokens?: Record<string, unknown>;
+  modelUsage: Record<string, ModelUsage>;
+  totalSessions: number;
+  totalMessages: number;
+  longestSession: LongestSession | null;
+  firstSessionDate: string;
+  hourCounts: Record<string, number>;
+  totalSpeculationTimeSavedMs?: number;
 }
 
-export interface DayStat {
-  messages: number;
-  tokens: number;
-  sessions: number;
+export interface DayActivity {
+  date: string;
+  messageCount: number;
+  sessionCount: number;
+  toolCallCount: number;
 }
 
 export interface ModelUsage {
-  input_tokens: number;
-  output_tokens: number;
-  cache_read_tokens: number;
-  cache_creation_tokens: number;
+  inputTokens: number;
+  outputTokens: number;
+  cacheReadInputTokens: number;
+  cacheCreationInputTokens: number;
+  webSearchRequests?: number;
+  costUSD?: number;
+  contextWindow?: number;
+  maxOutputTokens?: number;
+}
+
+export interface LongestSession {
+  sessionId: string;
+  duration: number;
+  messageCount: number;
+  timestamp: string;
 }
 
 export async function readStatsCache(): Promise<StatsCache | null> {

@@ -11,6 +11,7 @@ pub struct ProjectInfo {
     pub name: String,
     pub has_claude_md: bool,
     pub has_settings: bool,
+    pub is_root: bool,
 }
 
 #[tauri::command]
@@ -20,34 +21,22 @@ pub fn decode_project_path(encoded: String) -> String {
 
 #[tauri::command]
 pub fn list_projects() -> Result<Vec<ProjectInfo>, String> {
-    let projects_dir = utils::projects_dir();
+    let home = dirs::home_dir().map(|p| p.to_string_lossy().to_string());
 
-    if !projects_dir.exists() {
-        return Ok(Vec::new());
-    }
-
-    let entries = fs::read_dir(&projects_dir).map_err(|e| e.to_string())?;
-
-    let mut projects: Vec<ProjectInfo> = entries
+    let mut projects: Vec<ProjectInfo> = utils::list_project_dirs()?
+        .into_iter()
         .filter_map(|entry| {
-            let entry = entry.ok()?;
-            let file_type = entry.file_type().ok()?;
-            if !file_type.is_dir() {
-                return None;
-            }
-
             let dir_name = entry.file_name().into_string().ok()?;
-            if !dir_name.starts_with('-') {
-                return None;
-            }
-
             let decoded_path = utils::decode_encoded_path(&dir_name);
             let name = utils::decode_project_name(&dir_name);
 
             let project_root = PathBuf::from(&decoded_path);
-            let has_claude_md = project_root.join("CLAUDE.md").exists()
-                || project_root.join(".claude").join("CLAUDE.md").exists();
-            let has_settings = project_root.join(".claude").join("settings.json").exists();
+            let claude_dir = project_root.join(".claude");
+            let has_claude_md =
+                project_root.join("CLAUDE.md").exists() || claude_dir.join("CLAUDE.md").exists();
+            let has_settings = claude_dir.join("settings.json").exists();
+
+            let is_root = home.as_deref() == Some(decoded_path.as_str());
 
             Some(ProjectInfo {
                 encoded_path: dir_name,
@@ -55,6 +44,7 @@ pub fn list_projects() -> Result<Vec<ProjectInfo>, String> {
                 name,
                 has_claude_md,
                 has_settings,
+                is_root,
             })
         })
         .collect();
@@ -62,6 +52,20 @@ pub fn list_projects() -> Result<Vec<ProjectInfo>, String> {
     projects.sort_by(|a, b| a.name.to_lowercase().cmp(&b.name.to_lowercase()));
 
     Ok(projects)
+}
+
+#[tauri::command]
+pub fn delete_project(encoded_path: String) -> Result<(), String> {
+    if !encoded_path.starts_with('-') {
+        return Err("Invalid project path".to_string());
+    }
+
+    let project_dir = utils::projects_dir().join(&encoded_path);
+    if !project_dir.is_dir() {
+        return Ok(());
+    }
+
+    fs::remove_dir_all(&project_dir).map_err(|e| e.to_string())
 }
 
 #[cfg(test)]

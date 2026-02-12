@@ -6,6 +6,9 @@
     deleteConversation,
     readConversation,
     readCommandHistory,
+    deleteCommandEntry,
+    clearCommandHistory,
+    clearAllConversations,
     type ConversationMeta,
     type ConversationMessage,
     type SearchResult,
@@ -94,6 +97,33 @@
     }
   }
 
+  async function handleDeleteCommand(timestamp: number): Promise<void> {
+    try {
+      await deleteCommandEntry(timestamp);
+      await loadCommandHistory();
+    } catch (e) {
+      error = String(e);
+    }
+  }
+
+  async function handleClearAllConversations(): Promise<void> {
+    try {
+      await clearAllConversations(projectFilter ?? undefined);
+      await loadConversations();
+    } catch (e) {
+      error = String(e);
+    }
+  }
+
+  async function handleClearCommandHistory(): Promise<void> {
+    try {
+      await clearCommandHistory();
+      commandHistory = [];
+    } catch (e) {
+      error = String(e);
+    }
+  }
+
   async function toggleSession(conv: ConversationMeta): Promise<void> {
     const key = conv.file_path;
     if (expandedSessions.has(key)) {
@@ -164,6 +194,18 @@
   });
 </script>
 
+{#snippet messageRow(msg: ConversationMessage)}
+  <div class="px-3 py-1">
+    <div class="flex items-baseline gap-2">
+      <span class="shrink-0 text-[10px] font-medium {msg.role === 'user' ? 'text-accent' : 'text-text-secondary'}">[{msg.role}]</span>
+      <p class="truncate text-[11px] text-text-primary">{msg.content}</p>
+    </div>
+    {#if msg.timestamp}
+      <p class="mt-0.5 pl-12 text-[10px] text-text-tertiary">{formatTimestamp(msg.timestamp)}</p>
+    {/if}
+  </div>
+{/snippet}
+
 <div class="flex h-full flex-col">
   <div class="border-b border-border-primary px-4 py-2">
     <h1 class="text-xs font-medium text-text-secondary">// history</h1>
@@ -225,6 +267,14 @@
           [{project.name}]
         </button>
       {/each}
+      {#if conversations.length > 0}
+        <button
+          onclick={handleClearAllConversations}
+          class="ml-auto shrink-0 px-2 py-1 text-xs text-text-tertiary transition-colors hover:text-danger"
+        >
+          [clear all]
+        </button>
+      {/if}
     </div>
 
     {#if error}
@@ -318,15 +368,7 @@
                 {@const preview = getPreviewMessages(messages)}
                 <div class="ml-4 space-y-px border-l-2 border-accent py-1">
                   {#each preview.first as msg}
-                    <div class="px-3 py-1">
-                      <div class="flex items-baseline gap-2">
-                        <span class="shrink-0 text-[10px] font-medium {msg.role === 'user' ? 'text-accent' : 'text-text-secondary'}">[{msg.role}]</span>
-                        <p class="truncate text-[11px] text-text-primary">{msg.content}</p>
-                      </div>
-                      {#if msg.timestamp}
-                        <p class="mt-0.5 pl-12 text-[10px] text-text-tertiary">{formatTimestamp(msg.timestamp)}</p>
-                      {/if}
-                    </div>
+                    {@render messageRow(msg)}
                   {/each}
                   {#if preview.hiddenCount > 0}
                     <div class="px-3 py-1">
@@ -334,15 +376,7 @@
                     </div>
                   {/if}
                   {#each preview.last as msg}
-                    <div class="px-3 py-1">
-                      <div class="flex items-baseline gap-2">
-                        <span class="shrink-0 text-[10px] font-medium {msg.role === 'user' ? 'text-accent' : 'text-text-secondary'}">[{msg.role}]</span>
-                        <p class="truncate text-[11px] text-text-primary">{msg.content}</p>
-                      </div>
-                      {#if msg.timestamp}
-                        <p class="mt-0.5 pl-12 text-[10px] text-text-tertiary">{formatTimestamp(msg.timestamp)}</p>
-                      {/if}
-                    </div>
+                    {@render messageRow(msg)}
                   {/each}
                 </div>
               {/if}
@@ -352,6 +386,17 @@
       {/if}
     </div>
   {:else}
+    {#if commandHistory.length > 0}
+      <div class="flex items-center border-b border-border-primary px-3 py-1.5">
+        <button
+          onclick={handleClearCommandHistory}
+          class="ml-auto shrink-0 px-2 py-1 text-xs text-text-tertiary transition-colors hover:text-danger"
+        >
+          [clear all]
+        </button>
+      </div>
+    {/if}
+
     {#if error}
       <div class="px-4 py-2">
         <p class="text-xs text-danger">{error}</p>
@@ -383,6 +428,12 @@
                   {/if}
                 </div>
               </div>
+              <button
+                onclick={() => handleDeleteCommand(entry.timestamp)}
+                class="shrink-0 p-1 text-text-tertiary transition-colors hover:text-danger"
+              >
+                <Trash2 size={12} />
+              </button>
             </div>
           {/each}
         </div>

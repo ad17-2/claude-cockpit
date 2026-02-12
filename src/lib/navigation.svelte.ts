@@ -5,7 +5,6 @@ import {
   Settings,
   Bot,
   MessageSquare,
-  BarChart3,
 } from "lucide-svelte";
 
 type LucideIcon = typeof LayoutDashboard;
@@ -23,5 +22,4 @@ export const navItems: NavItem[] = [
   { label: "Settings", href: "/settings", icon: Settings },
   { label: "Entities", href: "/entities", icon: Bot },
   { label: "History", href: "/history", icon: MessageSquare },
-  { label: "Usage", href: "/usage", icon: BarChart3 },
 ];

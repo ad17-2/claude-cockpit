@@ -59,3 +59,19 @@ export async function readCommandHistory(
 ): Promise<HistoryEntry[]> {
   return invoke<HistoryEntry[]>("read_command_history", { limit });
 }
+
+export async function deleteCommandEntry(
+  timestamp: number,
+): Promise<void> {
+  return invoke<void>("delete_command_entry", { timestamp });
+}
+
+export async function clearCommandHistory(): Promise<void> {
+  return invoke<void>("clear_command_history");
+}
+
+export async function clearAllConversations(
+  projectFilter?: string,
+): Promise<number> {
+  return invoke<number>("clear_all_conversations", { projectFilter });
+}

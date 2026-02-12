@@ -61,6 +61,20 @@ pub fn read_json_file(path: &Path) -> Result<Value, String> {
         .map_err(|e| format!("Failed to parse {}: {}", path.display(), e))
 }
 
+pub fn list_jsonl_files(dir: &Path) -> Result<Vec<fs::DirEntry>, String> {
+    let entries: Vec<_> = fs::read_dir(dir)
+        .map_err(|e| e.to_string())?
+        .filter_map(|e| e.ok())
+        .filter(|e| {
+            e.path()
+                .extension()
+                .and_then(|ext| ext.to_str())
+                == Some("jsonl")
+        })
+        .collect();
+    Ok(entries)
+}
+
 pub fn list_project_dirs() -> Result<Vec<fs::DirEntry>, String> {
     let projects_dir = projects_dir();
     if !projects_dir.exists() {
