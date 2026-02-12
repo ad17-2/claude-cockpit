@@ -1,0 +1,233 @@
+<script lang="ts">
+  import { onMount } from "svelte";
+  import {
+    listConversations,
+    searchConversations,
+    deleteConversation,
+    type ConversationMeta,
+    type SearchResult,
+  } from "$lib/commands/history";
+  import { listProjects, type ProjectInfo } from "$lib/commands/projects";
+  import { Search, Trash2, MessageSquare, X } from "lucide-svelte";
+
+  let projects = $state<ProjectInfo[]>([]);
+  let conversations = $state<ConversationMeta[]>([]);
+  let loading = $state(true);
+  let error = $state<string | null>(null);
+
+  let projectFilter = $state<string | null>(null);
+  let searchQuery = $state("");
+  let searchResults = $state<SearchResult[]>([]);
+  let searching = $state(false);
+
+  let isSearchMode = $derived(searchQuery.trim().length > 0);
+
+  async function loadConversations(): Promise<void> {
+    loading = true;
+    error = null;
+    try {
+      conversations = await listConversations(projectFilter ?? undefined);
+    } catch (e) {
+      error = String(e);
+      conversations = [];
+    } finally {
+      loading = false;
+    }
+  }
+
+  async function handleSearch(): Promise<void> {
+    const q = searchQuery.trim();
+    if (!q) {
+      searchResults = [];
+      return;
+    }
+    searching = true;
+    try {
+      searchResults = await searchConversations(q, 50);
+    } catch (e) {
+      error = String(e);
+      searchResults = [];
+    } finally {
+      searching = false;
+    }
+  }
+
+  async function handleDelete(filePath: string): Promise<void> {
+    try {
+      await deleteConversation(filePath);
+      await loadConversations();
+    } catch (e) {
+      error = String(e);
+    }
+  }
+
+  function handleProjectFilter(encoded: string | null): void {
+    projectFilter = encoded;
+    loadConversations();
+  }
+
+  function clearSearch(): void {
+    searchQuery = "";
+    searchResults = [];
+  }
+
+  function formatTimestamp(ts: string): string {
+    if (!ts) return "";
+    try {
+      const d = new Date(ts);
+      return d.toLocaleDateString(undefined, {
+        month: "short",
+        day: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+      });
+    } catch {
+      return ts;
+    }
+  }
+
+  function decodeProject(encoded: string): string {
+    if (!encoded || !encoded.startsWith("-")) return encoded;
+    return encoded.substring(1).replace(/-/g, "/");
+  }
+
+  let searchTimeout: ReturnType<typeof setTimeout> | undefined;
+  function handleSearchInput(): void {
+    clearTimeout(searchTimeout);
+    searchTimeout = setTimeout(handleSearch, 300);
+  }
+
+  onMount(async () => {
+    try {
+      projects = await listProjects();
+    } catch {
+      // non-critical
+    }
+    await loadConversations();
+  });
+</script>
+
+<div class="flex h-full flex-col">
+  <div class="flex items-center justify-between border-b border-border-primary px-4 py-2">
+    <h1 class="text-sm font-semibold text-text-primary">History</h1>
+  </div>
+
+  <div class="flex items-center gap-2 border-b border-border-primary px-3 py-2">
+    <div class="relative flex-1">
+      <Search size={13} class="absolute left-2.5 top-1/2 -translate-y-1/2 text-text-tertiary" />
+      <input
+        type="text"
+        bind:value={searchQuery}
+        oninput={handleSearchInput}
+        placeholder="Search conversations..."
+        class="w-full rounded-md border border-border-primary bg-bg-tertiary py-1.5 pl-8 pr-8 text-xs text-text-primary placeholder-text-tertiary outline-none focus:border-border-focus"
+      />
+      {#if searchQuery}
+        <button
+          onclick={clearSearch}
+          class="absolute right-2 top-1/2 -translate-y-1/2 text-text-tertiary hover:text-text-primary"
+        >
+          <X size={13} />
+        </button>
+      {/if}
+    </div>
+  </div>
+
+  <div class="flex items-center gap-1 overflow-x-auto border-b border-border-primary px-3 py-2">
+    <button
+      onclick={() => handleProjectFilter(null)}
+      class="shrink-0 rounded-md px-2.5 py-1 text-xs font-medium transition-colors
+        {projectFilter === null ? 'bg-bg-active text-text-primary' : 'text-text-secondary hover:text-text-primary'}"
+    >
+      All
+    </button>
+    {#each projects as project}
+      <button
+        onclick={() => handleProjectFilter(project.encoded_path)}
+        class="shrink-0 rounded-md px-2.5 py-1 text-xs font-medium transition-colors
+          {projectFilter === project.encoded_path ? 'bg-bg-active text-text-primary' : 'text-text-secondary hover:text-text-primary'}"
+      >
+        {project.name}
+      </button>
+    {/each}
+  </div>
+
+  {#if error}
+    <div class="px-4 py-3">
+      <p class="text-sm text-danger">{error}</p>
+    </div>
+  {/if}
+
+  <div class="flex-1 overflow-y-auto">
+    {#if isSearchMode}
+      {#if searching}
+        <div class="flex h-full items-center justify-center">
+          <p class="text-sm text-text-tertiary">Searching...</p>
+        </div>
+      {:else if searchResults.length === 0}
+        <div class="flex h-full items-center justify-center">
+          <p class="text-sm text-text-tertiary">No results found.</p>
+        </div>
+      {:else}
+        <div class="space-y-1 p-3">
+          {#each searchResults as result}
+            <div
+              class="flex w-full items-start gap-3 rounded-md border border-border-primary bg-bg-secondary px-3 py-2.5 transition-colors hover:bg-bg-hover"
+            >
+              <MessageSquare size={14} class="mt-0.5 shrink-0 text-text-tertiary" />
+              <div class="min-w-0 flex-1">
+                <p class="truncate text-sm text-text-primary">{result.matched_line}</p>
+                <div class="mt-1 flex items-center gap-2">
+                  <span class="text-[10px] text-text-tertiary">{decodeProject(result.project)}</span>
+                  {#if result.timestamp}
+                    <span class="text-[10px] text-text-tertiary">{formatTimestamp(result.timestamp)}</span>
+                  {/if}
+                </div>
+              </div>
+              <button
+                onclick={() => handleDelete(result.session_path)}
+                class="shrink-0 rounded-md p-1 text-text-tertiary transition-colors hover:bg-bg-hover hover:text-danger"
+              >
+                <Trash2 size={13} />
+              </button>
+            </div>
+          {/each}
+        </div>
+      {/if}
+    {:else if loading}
+      <div class="flex h-full items-center justify-center">
+        <p class="text-sm text-text-tertiary">Loading...</p>
+      </div>
+    {:else if conversations.length === 0}
+      <div class="flex h-full items-center justify-center">
+        <p class="text-sm text-text-tertiary">No conversations found.</p>
+      </div>
+    {:else}
+      <div class="space-y-1 p-3">
+        {#each conversations as conv}
+          <div
+            class="flex w-full items-start gap-3 rounded-md border border-border-primary bg-bg-secondary px-3 py-2.5 transition-colors hover:bg-bg-hover"
+          >
+            <MessageSquare size={14} class="mt-0.5 shrink-0 text-text-tertiary" />
+            <div class="min-w-0 flex-1">
+              <p class="truncate text-sm text-text-primary">{conv.first_message_preview}</p>
+              <div class="mt-1 flex items-center gap-2">
+                <span class="text-[10px] text-text-tertiary">{decodeProject(conv.project)}</span>
+                <span class="text-[10px] text-text-tertiary">{conv.message_count} messages</span>
+                {#if conv.timestamp}
+                  <span class="text-[10px] text-text-tertiary">{formatTimestamp(conv.timestamp)}</span>
+                {/if}
+              </div>
+            </div>
+            <button
+              onclick={() => handleDelete(conv.file_path)}
+              class="shrink-0 rounded-md p-1 text-text-tertiary transition-colors hover:bg-bg-hover hover:text-danger"
+            >
+              <Trash2 size={13} />
+            </button>
+          </div>
+        {/each}
+      </div>
+    {/if}
+  </div>
+</div>
