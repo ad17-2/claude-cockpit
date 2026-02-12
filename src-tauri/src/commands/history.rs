@@ -49,7 +49,7 @@ pub fn list_conversations(project_filter: Option<String>) -> Result<Vec<Conversa
         let project_name = project_entry.file_name().to_string_lossy().to_string();
 
         if let Some(ref filter) = project_filter {
-            if !project_name.contains(filter.as_str()) {
+            if project_name != *filter {
                 continue;
             }
         }
@@ -357,7 +357,7 @@ pub fn clear_all_conversations(project_filter: Option<String>) -> Result<u32, St
         let project_name = project_entry.file_name().to_string_lossy().to_string();
 
         if let Some(ref filter) = project_filter {
-            if !project_name.contains(filter.as_str()) {
+            if project_name != *filter {
                 continue;
             }
         }

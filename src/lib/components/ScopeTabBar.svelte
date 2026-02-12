@@ -21,7 +21,7 @@
     [global]
   </button>
 
-  {#each projects as project}
+  {#each projects.filter(p => !p.is_root) as project}
     <button
       onclick={() => onselect(project.decoded_path)}
       class="flex shrink-0 items-center gap-1.5 px-2 py-1 text-xs transition-colors

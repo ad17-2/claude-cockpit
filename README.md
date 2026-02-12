@@ -1,44 +1,72 @@
 # Claude Cockpit
 
-A desktop dashboard for managing Claude AI projects, conversations, settings, and entities. Built with Tauri + SvelteKit.
+A desktop dashboard for [Claude Code](https://docs.anthropic.com/en/docs/claude-code). Reads from `~/.claude/` and provides a unified GUI to browse, monitor, edit, and manage projects, sessions, conversations, settings, and entities.
 
-Claude Cockpit reads from `~/.claude/` — the local directory where Claude Code stores its projects, conversation history, settings, and configuration files — and provides a unified GUI to browse, edit, and manage everything in one place.
+Built with Tauri + SvelteKit.
 
 ## Features
 
 ### Dashboard (`/`)
-Overview with stats (total projects, conversations, entities), recent conversation list, and quick navigation links.
+- Stats overview — projects, sessions, messages, tokens, entities, days active
+- Daily activity chart (last 30 days)
+- Token usage breakdown by model (input/output/cache)
+- Hourly activity heatmap
+- Recent conversations and projects list
+- Project management with delete support
+
+### Sessions (`/sessions`)
+- Live view of active Claude Code sessions (auto-refreshes every 3s)
+- Expandable message tail per session (polls every 2s)
+- Activity indicator for sessions active within the last 30s
+- Shows role, timestamp, token counts, and full message content
 
 ### CLAUDE.md Editor (`/claude-md`)
-Edit Claude system prompts and instructions with a CodeMirror-powered markdown editor. Supports both global (`~/.claude/CLAUDE.md`) and per-project scopes. Tracks unsaved changes.
+- CodeMirror markdown editor with syntax highlighting and One Dark theme
+- Global (`~/.claude/CLAUDE.md`) and per-project scope switching
+- Unsaved changes tracking, `Cmd/Ctrl+S` to save
+- Auto-reload on external file changes
 
-### Settings Manager (`/settings`)
-View and manage Claude permissions (allow/deny/ask rules). Switch between `settings.json` and `settings.local.json`. Raw JSON editing for full control.
+### Settings (`/settings`)
+- Manage `settings.json` and `settings.local.json` (global + per-project)
+- Effective settings view — see computed merged settings per project
+- Permissions manager (allow/deny/ask rules) with add/remove
+- MCP servers list with command, args, and env details
+- Raw JSON view for non-permission settings
 
-### Entities Manager (`/entities`)
-Browse, create, edit, and delete Claude entities across all types:
-- **Agents** — custom agent definitions
-- **Rules** — instruction rules
-- **Commands** — slash commands
-- **Skills** — skill definitions
-- **Hooks** — event hooks
+### Entities (`/entities`)
+- Browse, create, edit, and delete across all entity types: agents, rules, commands, skills, hooks
+- YAML frontmatter + markdown body editing
+- Global and per-project scope support
 
-Each entity supports YAML frontmatter + markdown body editing.
+### History (`/history`)
+- **Conversations** — full-text search, project filtering, expandable message previews, inline delete
+- **Commands** — terminal command execution history with timestamps
 
-### Conversation History (`/history`)
-Browse past conversations with full-text search, project filtering, and inline delete. Lists conversations with preview, message count, and timestamp.
+### Command Palette (`Cmd/Ctrl+K`)
+- Fuzzy search across pages, projects, entities, and conversations
+- Keyboard navigation (arrows, enter, escape)
 
-### Navigation
-Keyboard shortcuts `Cmd/Ctrl + 1-5` for quick page switching. Collapsible sidebar.
+### System Tray
+- Minimize to tray with show/quit menu
+- Desktop notifications on session completion
+
+### Keyboard Shortcuts
+
+| Shortcut | Action |
+|----------|--------|
+| `Cmd/Ctrl+1-6` | Jump to page |
+| `Cmd/Ctrl+K` | Command palette |
+| `Cmd/Ctrl+S` | Save in editors |
+| `Esc` | Close palette/dialogs |
 
 ## Tech Stack
 
 | Layer | Technology |
 |-------|-----------|
-| Desktop | Tauri 2.x (Rust) |
-| Frontend | SvelteKit 5, Svelte 5, TypeScript |
-| Styling | Tailwind CSS 4, custom dark theme |
-| Editors | CodeMirror 6 (code), TipTap 3 (rich text) |
+| Desktop | Tauri 2 (Rust) |
+| Frontend | SvelteKit 2, Svelte 5, TypeScript |
+| Styling | Tailwind CSS 4 |
+| Editor | CodeMirror 6 |
 | Icons | Lucide Svelte |
 | Build | Vite 6, Cargo |
 
@@ -84,39 +112,41 @@ pnpm check:watch    # Type checking in watch mode
 
 ```
 src/
-  routes/             # SvelteKit pages (dashboard, claude-md, settings, entities, history)
+  routes/             # SvelteKit pages
+    +page.svelte      #   Dashboard
+    sessions/          #   Live sessions
+    claude-md/         #   CLAUDE.md editor
+    settings/          #   Settings manager
+    entities/          #   Entities manager
+    history/           #   Conversation & command history
   lib/
-    components/       # Shared UI (Sidebar, MarkdownEditor, CodeMirrorEditor, etc.)
-    commands/         # Tauri command wrappers (projects, history, entities, settings, etc.)
-    navigation.svelte.ts
-    tauri.ts          # Tauri invoke helper
+    components/       # Shared UI (Sidebar, CommandPalette, editors, etc.)
+    commands/         # Tauri command wrappers
+    utils/            # Shared formatting and helpers
   app.css             # Tailwind theme + custom styles
-  app.html
 
 src-tauri/
   src/
-    commands/         # Rust backend (projects, history, entities, settings, claude_md, watcher)
+    commands/         # Rust backend (projects, sessions, history, entities, settings, etc.)
     lib.rs            # Tauri setup + command registration
     main.rs
-  tauri.conf.json     # App config (window 1200x800, bundle settings)
-  Cargo.toml
+  tauri.conf.json     # App config (1200x800 window, tray, bundle settings)
 ```
 
-## Data Locations
+## Data
 
-All data is read from the standard Claude Code directory:
+All data is read from the standard Claude Code directory (`~/.claude/`):
 
 | Data | Path |
 |------|------|
 | Projects | `~/.claude/projects/` |
-| Conversations | `~/.claude/projects/*/` (`.jsonl` files) |
+| Conversations | `~/.claude/projects/*/*.jsonl` |
 | Global instructions | `~/.claude/CLAUDE.md` |
-| Settings | `~/.claude/settings.json`, `~/.claude/settings.local.json` |
+| Settings | `~/.claude/settings.json`, `settings.local.json` |
 | Entities | `~/.claude/{agents,rules,commands,skills,hooks}/` |
+| Usage stats | `~/.claude/statsig-cache.json` |
+| Command history | `~/.claude/.history` |
 
-## IDE Setup
+## License
 
-[VS Code](https://code.visualstudio.com/) with:
-- [Svelte](https://marketplace.visualstudio.com/items?itemName=svelte.svelte-vscode)
-- [Tauri](https://marketplace.visualstudio.com/items?itemName=tauri-apps.tauri-vscode)
-- [rust-analyzer](https://marketplace.visualstudio.com/items?itemName=rust-lang.rust-analyzer)
+MIT
