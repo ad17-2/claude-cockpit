@@ -65,9 +65,7 @@
           tailMessages = [...tailMessages, ...result.messages];
           tailFromLine = result.total_lines;
         }
-      } catch {
-        // silent
-      }
+      } catch {}
     }, 2000);
   }
 
@@ -84,7 +82,7 @@
     return Date.now() - lastModified < 30000;
   }
 
-  function formatTimestamp(ts: string): string {
+  function formatTime(ts: string): string {
     if (!ts) return "";
     try {
       return new Date(ts).toLocaleTimeString(undefined, {
@@ -180,7 +178,7 @@
                       <div class="px-2 py-1">
                         <div class="flex items-baseline gap-2">
                           <span class="shrink-0 text-[10px] font-medium {msg.role === 'user' ? 'text-accent' : 'text-text-secondary'}">[{msg.role}]</span>
-                          <span class="text-[10px] text-text-tertiary">{formatTimestamp(msg.timestamp)}</span>
+                          <span class="text-[10px] text-text-tertiary">{formatTime(msg.timestamp)}</span>
                           {#if msg.tokens_in || msg.tokens_out}
                             <span class="text-[10px] text-text-tertiary">{msg.tokens_in} {msg.tokens_out}</span>
                           {/if}

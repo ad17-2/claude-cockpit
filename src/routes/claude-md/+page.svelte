@@ -65,7 +65,7 @@
     (async () => {
       try {
         projects = await listProjects();
-      } catch (_) {}
+      } catch {}
       await loadContent(activeScope);
 
       unlisten = await onFileChange("claude-md-changed", () => {

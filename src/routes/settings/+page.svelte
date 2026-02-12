@@ -107,7 +107,7 @@
     (async () => {
       try {
         projects = await listProjects();
-      } catch (_) {}
+      } catch {}
       await loadSettings();
 
       try {

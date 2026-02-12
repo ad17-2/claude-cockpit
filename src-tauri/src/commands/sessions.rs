@@ -51,16 +51,7 @@ pub fn list_active_sessions(threshold_secs: Option<u64>) -> Result<Vec<ActiveSes
         let project_name = utils::decode_project_name(&project_name_encoded);
         let project_path = project_entry.path();
 
-        let jsonl_files: Vec<_> = fs::read_dir(&project_path)
-            .map_err(|e| e.to_string())?
-            .filter_map(|e| e.ok())
-            .filter(|e| {
-                e.path()
-                    .extension()
-                    .and_then(|ext| ext.to_str())
-                    == Some("jsonl")
-            })
-            .collect();
+        let jsonl_files = utils::list_jsonl_files(&project_path)?;
 
         for file_entry in jsonl_files {
             let file_path = file_entry.path();

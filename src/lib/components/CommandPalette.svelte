@@ -132,9 +132,7 @@
       ]);
       projects = p;
       entities = [...agents, ...rules, ...commands, ...skills, ...hooks];
-    } catch {
-      // silent
-    }
+    } catch {}
   }
 
   $effect(() => {

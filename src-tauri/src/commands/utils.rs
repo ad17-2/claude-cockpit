@@ -17,8 +17,8 @@ pub fn decode_encoded_path(encoded: &str) -> String {
 }
 
 pub fn decode_project_name(encoded: &str) -> String {
-    let decoded = encoded.replace('-', "/");
-    decoded
+    encoded
+        .replace('-', "/")
         .rsplit('/')
         .find(|s| !s.is_empty())
         .unwrap_or(encoded)
