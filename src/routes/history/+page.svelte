@@ -8,7 +8,7 @@
     type SearchResult,
   } from "$lib/commands/history";
   import { listProjects, type ProjectInfo } from "$lib/commands/projects";
-  import { Search, Trash2, MessageSquare, X } from "lucide-svelte";
+  import { Search, Trash2, X } from "lucide-svelte";
 
   let projects = $state<ProjectInfo[]>([]);
   let conversations = $state<ConversationMeta[]>([]);
@@ -108,53 +108,53 @@
 </script>
 
 <div class="flex h-full flex-col">
-  <div class="flex items-center justify-between border-b border-border-primary px-4 py-2">
-    <h1 class="text-sm font-semibold text-text-primary">History</h1>
+  <div class="border-b border-border-primary px-4 py-2">
+    <h1 class="text-xs font-medium text-text-secondary">// history</h1>
   </div>
 
-  <div class="flex items-center gap-2 border-b border-border-primary px-3 py-2">
+  <div class="flex items-center gap-2 border-b border-border-primary px-3 py-1.5">
     <div class="relative flex-1">
-      <Search size={13} class="absolute left-2.5 top-1/2 -translate-y-1/2 text-text-tertiary" />
+      <Search size={12} class="absolute left-2 top-1/2 -translate-y-1/2 text-text-tertiary" />
       <input
         type="text"
         bind:value={searchQuery}
         oninput={handleSearchInput}
-        placeholder="Search conversations..."
-        class="w-full rounded-md border border-border-primary bg-bg-tertiary py-1.5 pl-8 pr-8 text-xs text-text-primary placeholder-text-tertiary outline-none focus:border-border-focus"
+        placeholder="search conversations..."
+        class="w-full border border-border-primary bg-bg-tertiary py-1.5 pl-7 pr-7 text-xs text-text-primary placeholder-text-tertiary outline-none focus:border-border-focus"
       />
       {#if searchQuery}
         <button
           onclick={clearSearch}
           class="absolute right-2 top-1/2 -translate-y-1/2 text-text-tertiary hover:text-text-primary"
         >
-          <X size={13} />
+          <X size={12} />
         </button>
       {/if}
     </div>
   </div>
 
-  <div class="flex items-center gap-1 overflow-x-auto border-b border-border-primary px-3 py-2">
+  <div class="flex items-center gap-1 overflow-x-auto border-b border-border-primary px-3 py-1.5">
     <button
       onclick={() => handleProjectFilter(null)}
-      class="shrink-0 rounded-md px-2.5 py-1 text-xs font-medium transition-colors
-        {projectFilter === null ? 'bg-bg-active text-text-primary' : 'text-text-secondary hover:text-text-primary'}"
+      class="shrink-0 px-2 py-1 text-xs transition-colors
+        {projectFilter === null ? 'text-accent' : 'text-text-secondary hover:text-text-primary'}"
     >
-      All
+      [all]
     </button>
     {#each projects as project}
       <button
         onclick={() => handleProjectFilter(project.encoded_path)}
-        class="shrink-0 rounded-md px-2.5 py-1 text-xs font-medium transition-colors
-          {projectFilter === project.encoded_path ? 'bg-bg-active text-text-primary' : 'text-text-secondary hover:text-text-primary'}"
+        class="shrink-0 px-2 py-1 text-xs transition-colors
+          {projectFilter === project.encoded_path ? 'text-accent' : 'text-text-secondary hover:text-text-primary'}"
       >
-        {project.name}
+        [{project.name}]
       </button>
     {/each}
   </div>
 
   {#if error}
-    <div class="px-4 py-3">
-      <p class="text-sm text-danger">{error}</p>
+    <div class="px-4 py-2">
+      <p class="text-xs text-danger">{error}</p>
     </div>
   {/if}
 
@@ -162,22 +162,22 @@
     {#if isSearchMode}
       {#if searching}
         <div class="flex h-full items-center justify-center">
-          <p class="text-sm text-text-tertiary">Searching...</p>
+          <p class="text-xs text-text-tertiary">searching...</p>
         </div>
       {:else if searchResults.length === 0}
         <div class="flex h-full items-center justify-center">
-          <p class="text-sm text-text-tertiary">No results found.</p>
+          <p class="text-xs text-text-tertiary">// no results found</p>
         </div>
       {:else}
-        <div class="space-y-1 p-3">
+        <div class="space-y-px p-3">
           {#each searchResults as result}
             <div
-              class="flex w-full items-start gap-3 rounded-md border border-border-primary bg-bg-secondary px-3 py-2.5 transition-colors hover:bg-bg-hover"
+              class="flex w-full items-start gap-2.5 border border-border-primary bg-bg-secondary px-3 py-2 transition-colors hover:bg-bg-hover"
             >
-              <MessageSquare size={14} class="mt-0.5 shrink-0 text-text-tertiary" />
+              <span class="mt-0.5 text-[10px] text-accent">></span>
               <div class="min-w-0 flex-1">
-                <p class="truncate text-sm text-text-primary">{result.matched_line}</p>
-                <div class="mt-1 flex items-center gap-2">
+                <p class="truncate text-xs text-text-primary">{result.matched_line}</p>
+                <div class="mt-0.5 flex items-center gap-2">
                   <span class="text-[10px] text-text-tertiary">{decodeProject(result.project)}</span>
                   {#if result.timestamp}
                     <span class="text-[10px] text-text-tertiary">{formatTimestamp(result.timestamp)}</span>
@@ -186,9 +186,9 @@
               </div>
               <button
                 onclick={() => handleDelete(result.session_path)}
-                class="shrink-0 rounded-md p-1 text-text-tertiary transition-colors hover:bg-bg-hover hover:text-danger"
+                class="shrink-0 p-1 text-text-tertiary transition-colors hover:text-danger"
               >
-                <Trash2 size={13} />
+                <Trash2 size={12} />
               </button>
             </div>
           {/each}
@@ -196,24 +196,24 @@
       {/if}
     {:else if loading}
       <div class="flex h-full items-center justify-center">
-        <p class="text-sm text-text-tertiary">Loading...</p>
+        <p class="text-xs text-text-tertiary">loading...</p>
       </div>
     {:else if conversations.length === 0}
       <div class="flex h-full items-center justify-center">
-        <p class="text-sm text-text-tertiary">No conversations found.</p>
+        <p class="text-xs text-text-tertiary">// no conversations found</p>
       </div>
     {:else}
-      <div class="space-y-1 p-3">
+      <div class="space-y-px p-3">
         {#each conversations as conv}
           <div
-            class="flex w-full items-start gap-3 rounded-md border border-border-primary bg-bg-secondary px-3 py-2.5 transition-colors hover:bg-bg-hover"
+            class="flex w-full items-start gap-2.5 border border-border-primary bg-bg-secondary px-3 py-2 transition-colors hover:bg-bg-hover"
           >
-            <MessageSquare size={14} class="mt-0.5 shrink-0 text-text-tertiary" />
+            <span class="mt-0.5 text-[10px] text-accent">></span>
             <div class="min-w-0 flex-1">
-              <p class="truncate text-sm text-text-primary">{conv.first_message_preview}</p>
-              <div class="mt-1 flex items-center gap-2">
+              <p class="truncate text-xs text-text-primary">{conv.first_message_preview}</p>
+              <div class="mt-0.5 flex items-center gap-2">
                 <span class="text-[10px] text-text-tertiary">{decodeProject(conv.project)}</span>
-                <span class="text-[10px] text-text-tertiary">{conv.message_count} messages</span>
+                <span class="text-[10px] text-text-tertiary">{conv.message_count} msgs</span>
                 {#if conv.timestamp}
                   <span class="text-[10px] text-text-tertiary">{formatTimestamp(conv.timestamp)}</span>
                 {/if}
@@ -221,9 +221,9 @@
             </div>
             <button
               onclick={() => handleDelete(conv.file_path)}
-              class="shrink-0 rounded-md p-1 text-text-tertiary transition-colors hover:bg-bg-hover hover:text-danger"
+              class="shrink-0 p-1 text-text-tertiary transition-colors hover:text-danger"
             >
-              <Trash2 size={13} />
+              <Trash2 size={12} />
             </button>
           </div>
         {/each}

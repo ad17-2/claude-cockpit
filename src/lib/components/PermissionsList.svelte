@@ -80,33 +80,33 @@
       bind:value={newPermission}
       onkeydown={handleKeydown}
       placeholder='e.g. Bash(git:*), WebSearch, mcp__plugin__tool'
-      class="flex-1 rounded-md border border-border-primary bg-bg-tertiary px-2.5 py-1.5 text-xs text-text-primary placeholder-text-tertiary outline-none focus:border-border-focus"
+      class="flex-1 border border-border-primary bg-bg-tertiary px-2 py-1.5 text-xs text-text-primary placeholder-text-tertiary outline-none focus:border-border-focus"
     />
     <button
       onclick={handleAdd}
       disabled={!newPermission.trim() || adding}
-      class="flex items-center gap-1 rounded-md bg-accent px-2.5 py-1.5 text-xs font-medium text-white transition-colors hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-50"
+      class="flex items-center gap-1 bg-accent px-2 py-1.5 text-xs font-medium text-bg-primary transition-colors hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-50"
     >
       <Plus size={12} />
-      Add
+      add
     </button>
   </div>
 
   {#if permissions.length === 0}
-    <p class="text-xs text-text-tertiary">No {category} permissions.</p>
+    <p class="text-xs text-text-tertiary">// no {category} permissions</p>
   {:else}
     {#each grouped as group}
       <div>
-        <p class="mb-1 text-[11px] font-medium uppercase tracking-wider text-text-tertiary">{group.prefix} ({group.items.length})</p>
-        <div class="space-y-0.5">
+        <p class="mb-1 text-[11px] uppercase tracking-wider text-text-tertiary">// {group.prefix} ({group.items.length})</p>
+        <div class="space-y-px">
           {#each group.items as perm}
-            <div class="group flex items-center justify-between rounded px-2 py-1 hover:bg-bg-hover">
-              <span class="font-mono text-xs text-text-secondary">{perm}</span>
+            <div class="group flex items-center justify-between px-2 py-1 hover:bg-bg-hover">
+              <span class="text-xs text-text-secondary">{perm}</span>
               <button
                 onclick={() => handleRemove(perm)}
                 class="invisible text-text-tertiary transition-colors hover:text-danger group-hover:visible"
               >
-                <X size={13} />
+                <X size={12} />
               </button>
             </div>
           {/each}

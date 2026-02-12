@@ -75,4 +75,4 @@
   });
 </script>
 
-<div bind:this={container} class="h-full overflow-hidden rounded-md border border-border-primary"></div>
+<div bind:this={container} class="h-full overflow-hidden border border-border-primary"></div>

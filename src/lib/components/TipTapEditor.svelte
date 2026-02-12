@@ -9,7 +9,6 @@
   }
 
   function getMarkdownFromEditor(e: Editor): string {
-    // TipTap types storage as browser Storage, but it's actually a Record at runtime
     const storage = e.storage as unknown as Record<string, MarkdownStorage>;
     return storage.markdown.getMarkdown();
   }
@@ -67,35 +66,35 @@
 
 <div
   bind:this={element}
-  class="h-full overflow-y-auto rounded-md border border-border-primary bg-bg-secondary"
+  class="h-full overflow-y-auto border border-border-primary bg-bg-secondary"
 ></div>
 
 <style>
   :global(.tiptap) {
     min-height: 100%;
     color: var(--color-text-primary);
-    font-family: var(--font-sans);
+    font-family: var(--font-mono);
     font-size: 13px;
-    line-height: 1.6;
+    line-height: 1.7;
   }
 
   :global(.tiptap h1) {
-    font-size: 1.5em;
-    font-weight: 700;
+    font-size: 1.4em;
+    font-weight: 600;
     margin: 1em 0 0.5em;
     color: var(--color-text-primary);
   }
 
   :global(.tiptap h2) {
-    font-size: 1.25em;
+    font-size: 1.2em;
     font-weight: 600;
     margin: 0.8em 0 0.4em;
     color: var(--color-text-primary);
   }
 
   :global(.tiptap h3) {
-    font-size: 1.1em;
-    font-weight: 600;
+    font-size: 1.05em;
+    font-weight: 500;
     margin: 0.6em 0 0.3em;
     color: var(--color-text-primary);
   }
@@ -107,17 +106,16 @@
   :global(.tiptap code) {
     background: var(--color-bg-tertiary);
     padding: 0.15em 0.3em;
-    border-radius: 3px;
     font-family: var(--font-mono);
     font-size: 0.9em;
   }
 
   :global(.tiptap pre) {
     background: var(--color-bg-tertiary);
-    border-radius: 6px;
     padding: 0.75em 1em;
     margin: 0.5em 0;
     overflow-x: auto;
+    border: 1px solid var(--color-border-primary);
   }
 
   :global(.tiptap pre code) {
@@ -131,7 +129,7 @@
   }
 
   :global(.tiptap blockquote) {
-    border-left: 3px solid var(--color-border-secondary);
+    border-left: 2px solid var(--color-border-secondary);
     padding-left: 1em;
     margin: 0.5em 0;
     color: var(--color-text-secondary);
