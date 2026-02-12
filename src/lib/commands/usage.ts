@@ -28,6 +28,6 @@ export interface ModelUsage {
   cache_creation_tokens: number;
 }
 
-export async function readStatsCache(): Promise<unknown> {
-  return invoke<unknown>("read_stats_cache");
+export async function readStatsCache(): Promise<StatsCache | null> {
+  return invoke<StatsCache | null>("read_stats_cache");
 }

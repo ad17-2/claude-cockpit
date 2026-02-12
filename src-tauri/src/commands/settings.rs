@@ -1,12 +1,8 @@
 use serde_json::Value;
 use std::fs;
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 
-fn claude_dir() -> PathBuf {
-    dirs::home_dir()
-        .expect("could not find home directory")
-        .join(".claude")
-}
+use super::utils;
 
 fn settings_path(scope: &str, file_type: &str) -> PathBuf {
     let filename = match file_type {
@@ -15,20 +11,10 @@ fn settings_path(scope: &str, file_type: &str) -> PathBuf {
     };
 
     if scope == "global" {
-        claude_dir().join(filename)
+        utils::claude_dir().join(filename)
     } else {
         PathBuf::from(scope).join(".claude").join(filename)
     }
-}
-
-fn read_json_file(path: &Path) -> Result<Value, String> {
-    if !path.exists() {
-        return Ok(Value::Object(serde_json::Map::new()));
-    }
-    let content = fs::read_to_string(path)
-        .map_err(|e| format!("Failed to read {}: {}", path.display(), e))?;
-    serde_json::from_str(&content)
-        .map_err(|e| format!("Failed to parse {}: {}", path.display(), e))
 }
 
 fn merge_json(base: &Value, overlay: &Value) -> Value {
@@ -52,7 +38,7 @@ fn merge_json(base: &Value, overlay: &Value) -> Value {
 #[tauri::command]
 pub fn read_settings(scope: String, file_type: String) -> Result<Value, String> {
     let path = settings_path(&scope, &file_type);
-    read_json_file(&path)
+    utils::read_json_file(&path)
 }
 
 #[tauri::command]
@@ -73,10 +59,10 @@ pub fn write_settings(scope: String, file_type: String, content: Value) -> Resul
 
 #[tauri::command]
 pub fn get_effective_settings(project_path: String) -> Result<Value, String> {
-    let global_settings = read_json_file(&settings_path("global", "settings"))?;
-    let global_local = read_json_file(&settings_path("global", "settings_local"))?;
-    let project_settings = read_json_file(&settings_path(&project_path, "settings"))?;
-    let project_local = read_json_file(&settings_path(&project_path, "settings_local"))?;
+    let global_settings = utils::read_json_file(&settings_path("global", "settings"))?;
+    let global_local = utils::read_json_file(&settings_path("global", "settings_local"))?;
+    let project_settings = utils::read_json_file(&settings_path(&project_path, "settings"))?;
+    let project_local = utils::read_json_file(&settings_path(&project_path, "settings_local"))?;
 
     let merged = merge_json(&global_settings, &global_local);
     let merged = merge_json(&merged, &project_settings);
@@ -93,7 +79,7 @@ pub fn add_permission(
     permission: String,
 ) -> Result<(), String> {
     let path = settings_path(&scope, &file_type);
-    let mut settings = read_json_file(&path)?;
+    let mut settings = utils::read_json_file(&path)?;
 
     let permissions = settings
         .as_object_mut()
@@ -133,7 +119,7 @@ pub fn remove_permission(
     permission: String,
 ) -> Result<(), String> {
     let path = settings_path(&scope, &file_type);
-    let mut settings = read_json_file(&path)?;
+    let mut settings = utils::read_json_file(&path)?;
 
     if let Some(permissions) = settings.get_mut("permissions") {
         if let Some(arr) = permissions.get_mut(&category) {

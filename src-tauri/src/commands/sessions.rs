@@ -5,46 +5,7 @@ use std::io::{BufRead, BufReader};
 use std::path::PathBuf;
 use std::time::{SystemTime, UNIX_EPOCH};
 
-fn claude_dir() -> PathBuf {
-    dirs::home_dir()
-        .expect("could not find home directory")
-        .join(".claude")
-}
-
-fn decode_project_name(encoded: &str) -> String {
-    let decoded = encoded.replace('-', "/");
-    decoded
-        .rsplit('/')
-        .find(|s| !s.is_empty())
-        .unwrap_or(encoded)
-        .to_string()
-}
-
-fn truncate_str(s: &str, max_chars: usize) -> String {
-    let truncated: String = s.chars().take(max_chars).collect();
-    if truncated.len() < s.len() {
-        format!("{}...", truncated)
-    } else {
-        truncated
-    }
-}
-
-fn extract_text_content(content: &Value) -> String {
-    match content {
-        Value::String(s) => truncate_str(s.trim(), 200),
-        Value::Array(arr) => {
-            for item in arr {
-                if item.get("type").and_then(|t| t.as_str()) == Some("text") {
-                    if let Some(text) = item.get("text").and_then(|t| t.as_str()) {
-                        return truncate_str(text.trim(), 200);
-                    }
-                }
-            }
-            String::new()
-        }
-        _ => String::new(),
-    }
-}
+use super::utils;
 
 #[derive(Debug, Serialize)]
 pub struct ActiveSession {
@@ -75,10 +36,7 @@ pub struct TailResult {
 
 #[tauri::command]
 pub fn list_active_sessions(threshold_secs: Option<u64>) -> Result<Vec<ActiveSession>, String> {
-    let projects_dir = claude_dir().join("projects");
-    if !projects_dir.exists() {
-        return Ok(Vec::new());
-    }
+    let project_dirs = utils::list_project_dirs()?;
 
     let threshold = threshold_secs.unwrap_or(300);
     let now = SystemTime::now()
@@ -88,20 +46,9 @@ pub fn list_active_sessions(threshold_secs: Option<u64>) -> Result<Vec<ActiveSes
 
     let mut sessions = Vec::new();
 
-    let project_dirs: Vec<_> = fs::read_dir(&projects_dir)
-        .map_err(|e| e.to_string())?
-        .filter_map(|e| e.ok())
-        .filter(|e| e.file_type().ok().map_or(false, |ft| ft.is_dir()))
-        .filter(|e| {
-            e.file_name()
-                .to_str()
-                .map_or(false, |n| n.starts_with('-'))
-        })
-        .collect();
-
     for project_entry in project_dirs {
         let project_name_encoded = project_entry.file_name().to_string_lossy().to_string();
-        let project_name = decode_project_name(&project_name_encoded);
+        let project_name = utils::decode_project_name(&project_name_encoded);
         let project_path = project_entry.path();
 
         let jsonl_files: Vec<_> = fs::read_dir(&project_path)
@@ -170,7 +117,7 @@ pub fn list_active_sessions(threshold_secs: Option<u64>) -> Result<Vec<ActiveSes
 
                     if let Some(message) = parsed.get("message") {
                         if let Some(content) = message.get("content") {
-                            let text = extract_text_content(content);
+                            let text = utils::extract_text_content(content);
                             if !text.is_empty() {
                                 last_message_preview = text;
                             }
@@ -248,7 +195,7 @@ pub fn tail_session(file_path: String, from_line: u32) -> Result<TailResult, Str
         let content = parsed
             .get("message")
             .and_then(|m| m.get("content"))
-            .map(|c| extract_text_content(c))
+            .map(|c| utils::extract_text_content(c))
             .unwrap_or_default();
 
         if content.is_empty() {

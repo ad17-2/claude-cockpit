@@ -1,16 +1,11 @@
 use serde_json::Value;
 use std::fs;
-use std::path::PathBuf;
 
-fn claude_dir() -> PathBuf {
-    dirs::home_dir()
-        .expect("could not find home directory")
-        .join(".claude")
-}
+use super::utils;
 
 #[tauri::command]
 pub fn read_stats_cache() -> Result<Value, String> {
-    let base = claude_dir();
+    let base = utils::claude_dir();
     let candidates = ["stats-cache.json", "statsig-cache.json"];
 
     for name in &candidates {

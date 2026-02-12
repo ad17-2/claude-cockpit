@@ -13,6 +13,7 @@
   } from "$lib/commands/history";
   import { listProjects, type ProjectInfo } from "$lib/commands/projects";
   import { onFileChange } from "$lib/commands/watcher";
+  import { formatTimestamp, formatEpoch, decodeProject } from "$lib/utils/format";
   import { Search, Trash2, X, ChevronRight, ChevronDown, Terminal } from "lucide-svelte";
 
   let projects = $state<ProjectInfo[]>([]);
@@ -133,41 +134,6 @@
   function clearSearch(): void {
     searchQuery = "";
     searchResults = [];
-  }
-
-  function formatTimestamp(ts: string): string {
-    if (!ts) return "";
-    try {
-      const d = new Date(ts);
-      return d.toLocaleDateString(undefined, {
-        month: "short",
-        day: "numeric",
-        hour: "2-digit",
-        minute: "2-digit",
-      });
-    } catch {
-      return ts;
-    }
-  }
-
-  function formatEpoch(ts: number): string {
-    if (!ts) return "";
-    try {
-      const d = new Date(ts);
-      return d.toLocaleDateString(undefined, {
-        month: "short",
-        day: "numeric",
-        hour: "2-digit",
-        minute: "2-digit",
-      });
-    } catch {
-      return String(ts);
-    }
-  }
-
-  function decodeProject(encoded: string): string {
-    if (!encoded || !encoded.startsWith("-")) return encoded;
-    return encoded.substring(1).replace(/-/g, "/");
   }
 
   let searchTimeout: ReturnType<typeof setTimeout> | undefined;

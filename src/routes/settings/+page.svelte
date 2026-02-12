@@ -9,6 +9,7 @@
   } from "$lib/commands/settings";
   import { listMcpServers, type McpServerInfo } from "$lib/commands/mcp";
   import { onFileChange } from "$lib/commands/watcher";
+  import { decodeProject } from "$lib/utils/format";
   import ScopeTabBar from "$lib/components/ScopeTabBar.svelte";
   import PermissionsList from "$lib/components/PermissionsList.svelte";
   import { Shield, ShieldOff, HelpCircle, ChevronRight, ChevronDown } from "lucide-svelte";
@@ -58,9 +59,7 @@
     effectiveLoading = true;
     error = null;
     try {
-      const decoded = effectiveProject.startsWith("-")
-        ? effectiveProject.substring(1).replace(/-/g, "/")
-        : effectiveProject;
+      const decoded = decodeProject(effectiveProject);
       effectiveSettings = await getEffectiveSettings(decoded);
     } catch (e) {
       error = String(e);

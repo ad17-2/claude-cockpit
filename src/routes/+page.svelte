@@ -4,6 +4,7 @@
   import { listConversations, type ConversationMeta } from "$lib/commands/history";
   import { listEntities } from "$lib/commands/entities";
   import { startWatching, onFileChange } from "$lib/commands/watcher";
+  import { formatTimestamp, decodeProject } from "$lib/utils/format";
   import {
     FolderOpen,
     MessageSquare,
@@ -17,26 +18,6 @@
   let entityCount = $state(0);
   let loading = $state(true);
   let error = $state<string | null>(null);
-
-  function formatTimestamp(ts: string): string {
-    if (!ts) return "";
-    try {
-      const d = new Date(ts);
-      return d.toLocaleDateString(undefined, {
-        month: "short",
-        day: "numeric",
-        hour: "2-digit",
-        minute: "2-digit",
-      });
-    } catch {
-      return ts;
-    }
-  }
-
-  function decodeProject(encoded: string): string {
-    if (!encoded || !encoded.startsWith("-")) return encoded;
-    return encoded.substring(1).replace(/-/g, "/");
-  }
 
   onMount(() => {
     let unlisteners: (() => void)[] = [];

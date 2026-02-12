@@ -2,24 +2,7 @@ use serde::Serialize;
 use std::fs;
 use std::path::PathBuf;
 
-fn claude_projects_dir() -> PathBuf {
-    dirs::home_dir()
-        .expect("could not find home directory")
-        .join(".claude")
-        .join("projects")
-}
-
-fn decode_encoded_path(encoded: &str) -> String {
-    encoded.replace('-', "/")
-}
-
-fn project_name_from_decoded(decoded: &str) -> String {
-    decoded
-        .rsplit('/')
-        .find(|s| !s.is_empty())
-        .unwrap_or(decoded)
-        .to_string()
-}
+use super::utils;
 
 #[derive(Debug, Serialize)]
 pub struct ProjectInfo {
@@ -32,12 +15,12 @@ pub struct ProjectInfo {
 
 #[tauri::command]
 pub fn decode_project_path(encoded: String) -> String {
-    decode_encoded_path(&encoded)
+    utils::decode_encoded_path(&encoded)
 }
 
 #[tauri::command]
 pub fn list_projects() -> Result<Vec<ProjectInfo>, String> {
-    let projects_dir = claude_projects_dir();
+    let projects_dir = utils::projects_dir();
 
     if !projects_dir.exists() {
         return Ok(Vec::new());
@@ -58,8 +41,8 @@ pub fn list_projects() -> Result<Vec<ProjectInfo>, String> {
                 return None;
             }
 
-            let decoded_path = decode_encoded_path(&dir_name);
-            let name = project_name_from_decoded(&decoded_path);
+            let decoded_path = utils::decode_encoded_path(&dir_name);
+            let name = utils::decode_project_name(&dir_name);
 
             let project_root = PathBuf::from(&decoded_path);
             let has_claude_md = project_root.join("CLAUDE.md").exists()
@@ -88,24 +71,27 @@ mod tests {
     #[test]
     fn test_decode_encoded_path() {
         assert_eq!(
-            decode_encoded_path("-Users-adtzy-Finku"),
+            utils::decode_encoded_path("-Users-adtzy-Finku"),
             "/Users/adtzy/Finku"
         );
         assert_eq!(
-            decode_encoded_path("-Users-adtzy-Personal"),
+            utils::decode_encoded_path("-Users-adtzy-Personal"),
             "/Users/adtzy/Personal"
         );
         assert_eq!(
-            decode_encoded_path("-Users-adtzy-Finku-finku-users"),
+            utils::decode_encoded_path("-Users-adtzy-Finku-finku-users"),
             "/Users/adtzy/Finku/finku/users"
         );
     }
 
     #[test]
-    fn test_project_name_from_decoded() {
-        assert_eq!(project_name_from_decoded("/Users/adtzy/Finku"), "Finku");
+    fn test_decode_project_name() {
         assert_eq!(
-            project_name_from_decoded("/Users/adtzy/Personal"),
+            utils::decode_project_name("-Users-adtzy-Finku"),
+            "Finku"
+        );
+        assert_eq!(
+            utils::decode_project_name("-Users-adtzy-Personal"),
             "Personal"
         );
     }

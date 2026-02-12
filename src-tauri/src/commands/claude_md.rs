@@ -1,11 +1,10 @@
 use std::fs;
 use std::path::PathBuf;
 
+use super::utils;
+
 fn global_claude_md_path() -> PathBuf {
-    dirs::home_dir()
-        .expect("could not find home directory")
-        .join(".claude")
-        .join("CLAUDE.md")
+    utils::claude_dir().join("CLAUDE.md")
 }
 
 fn project_claude_md_path(project_path: &str) -> PathBuf {

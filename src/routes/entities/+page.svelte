@@ -37,6 +37,10 @@
 
   let isDirty = $derived(editContent !== savedContent);
 
+  function fileNameFromPath(filePath: string): string {
+    return filePath.split("/").pop()?.replace(".md", "") ?? "";
+  }
+
   async function loadEntities(): Promise<void> {
     loading = true;
     error = null;
@@ -54,7 +58,7 @@
     selectedEntity = entity;
     creating = false;
     try {
-      const fileName = entity.file_path.split("/").pop()?.replace(".md", "") ?? entity.name;
+      const fileName = fileNameFromPath(entity.file_path) || entity.name;
       detail = await readEntity(
         activeType,
         entity.scope,
@@ -88,7 +92,7 @@
     if (!selectedEntity || !isDirty || saving) return;
     saving = true;
     try {
-      const fileName = selectedEntity.file_path.split("/").pop()?.replace(".md", "") ?? selectedEntity.name;
+      const fileName = fileNameFromPath(selectedEntity.file_path) || selectedEntity.name;
       await writeEntity(activeType, selectedEntity.scope, fileName, editContent);
       savedContent = editContent;
       await loadEntities();
@@ -101,7 +105,7 @@
 
   async function handleDelete(): Promise<void> {
     if (!selectedEntity) return;
-    const fileName = selectedEntity.file_path.split("/").pop()?.replace(".md", "") ?? selectedEntity.name;
+    const fileName = fileNameFromPath(selectedEntity.file_path) || selectedEntity.name;
     await deleteEntity(activeType, selectedEntity.scope, fileName);
     selectedEntity = null;
     detail = null;

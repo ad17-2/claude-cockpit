@@ -1,85 +1,58 @@
 <script lang="ts">
   import { onMount } from "svelte";
-  import { readStatsCache } from "$lib/commands/usage";
+  import { readStatsCache, type StatsCache, type DayStat, type ModelUsage } from "$lib/commands/usage";
   import { onFileChange } from "$lib/commands/watcher";
+  import { formatNumber } from "$lib/utils/format";
   import BarChart from "$lib/components/charts/BarChart.svelte";
   import HeatMap from "$lib/components/charts/HeatMap.svelte";
   import { BarChart3, MessageSquare, Zap, Calendar } from "lucide-svelte";
 
-  let statsRaw = $state<unknown>(null);
+  let stats = $state<StatsCache | null>(null);
   let loading = $state(true);
   let error = $state<string | null>(null);
 
-  let totalSessions = $state(0);
-  let totalMessages = $state(0);
-  let totalTokens = $state(0);
-  let daysActive = $state(0);
-  let dailyData = $state<{ date: string; value: number }[]>([]);
-  let modelBreakdown = $state<{ name: string; input: number; output: number; cache_read: number; cache_creation: number; total: number }[]>([]);
-  let hourlyActivity = $state<number[]>([]);
-  let longestSession = $state<{ duration_mins: number; message_count: number; date: string } | null>(null);
+  let totalSessions = $derived(stats?.total_sessions ?? 0);
+  let totalMessages = $derived(stats?.total_messages ?? 0);
+  let totalTokens = $derived(stats?.total_tokens ?? 0);
+  let daysActive = $derived(stats?.days_active ?? 0);
 
-  function parseStats(raw: unknown): void {
-    if (!raw || typeof raw !== "object") return;
-    const data = raw as Record<string, unknown>;
+  let dailyData = $derived(
+    stats?.daily_stats
+      ? Object.entries(stats.daily_stats)
+          .map(([date, stat]) => ({ date, value: stat.messages }))
+          .sort((a, b) => a.date.localeCompare(b.date))
+          .slice(-30)
+      : []
+  );
 
-    if (typeof data.total_sessions === "number") totalSessions = data.total_sessions;
-    if (typeof data.total_messages === "number") totalMessages = data.total_messages;
-    if (typeof data.total_tokens === "number") totalTokens = data.total_tokens;
-    if (typeof data.days_active === "number") daysActive = data.days_active;
+  let modelBreakdown = $derived(
+    stats?.model_usage
+      ? Object.entries(stats.model_usage)
+          .map(([name, usage]) => ({
+            name,
+            input: usage.input_tokens,
+            output: usage.output_tokens,
+            cache_read: usage.cache_read_tokens,
+            cache_creation: usage.cache_creation_tokens,
+            total: usage.input_tokens + usage.output_tokens + usage.cache_read_tokens + usage.cache_creation_tokens,
+          }))
+          .sort((a, b) => b.total - a.total)
+      : []
+  );
 
-    if (data.daily_stats && typeof data.daily_stats === "object") {
-      const daily = data.daily_stats as Record<string, { messages?: number }>;
-      const entries = Object.entries(daily)
-        .map(([date, stat]) => ({
-          date,
-          value: typeof stat?.messages === "number" ? stat.messages : 0,
-        }))
-        .sort((a, b) => a.date.localeCompare(b.date))
-        .slice(-30);
-      dailyData = entries;
-    }
-
-    if (data.model_usage && typeof data.model_usage === "object") {
-      const models = data.model_usage as Record<string, Record<string, number>>;
-      const entries = Object.entries(models).map(([name, usage]) => ({
-        name,
-        input: usage.input_tokens ?? 0,
-        output: usage.output_tokens ?? 0,
-        cache_read: usage.cache_read_tokens ?? 0,
-        cache_creation: usage.cache_creation_tokens ?? 0,
-        total: (usage.input_tokens ?? 0) + (usage.output_tokens ?? 0) + (usage.cache_read_tokens ?? 0) + (usage.cache_creation_tokens ?? 0),
-      }));
-      entries.sort((a, b) => b.total - a.total);
-      modelBreakdown = entries;
-    }
-
-    if (Array.isArray(data.hourly_activity)) {
-      hourlyActivity = data.hourly_activity as number[];
-    }
-
-    if (data.longest_session && typeof data.longest_session === "object") {
-      longestSession = data.longest_session as { duration_mins: number; message_count: number; date: string };
-    }
-  }
+  let hourlyActivity = $derived(stats?.hourly_activity ?? []);
+  let longestSession = $derived(stats?.longest_session ?? null);
 
   async function loadStats(): Promise<void> {
     loading = true;
     error = null;
     try {
-      statsRaw = await readStatsCache();
-      parseStats(statsRaw);
+      stats = await readStatsCache();
     } catch (e) {
       error = String(e);
     } finally {
       loading = false;
     }
-  }
-
-  function formatNumber(n: number): string {
-    if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
-    if (n >= 1_000) return `${(n / 1_000).toFixed(1)}K`;
-    return String(n);
   }
 
   onMount(() => {
@@ -125,7 +98,7 @@
       <div class="flex h-full items-center justify-center">
         <p class="text-xs text-text-tertiary">loading...</p>
       </div>
-    {:else if !statsRaw}
+    {:else if !stats}
       <div class="flex h-full items-center justify-center">
         <div class="text-center">
           <BarChart3 size={24} class="mx-auto mb-2 text-text-tertiary" />

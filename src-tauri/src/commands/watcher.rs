@@ -6,6 +6,8 @@ use std::sync::OnceLock;
 use std::time::{Duration, Instant};
 use tauri::{AppHandle, Emitter};
 
+use super::utils;
+
 static WATCHER_STARTED: OnceLock<()> = OnceLock::new();
 
 fn classify_event(path: &Path) -> Option<&'static str> {
@@ -37,9 +39,7 @@ pub fn start_watching(app: AppHandle) -> Result<(), String> {
         return Ok(());
     }
 
-    let claude_dir = dirs::home_dir()
-        .ok_or("could not find home directory")?
-        .join(".claude");
+    let claude_dir = utils::claude_dir();
 
     if !claude_dir.exists() {
         return Ok(());

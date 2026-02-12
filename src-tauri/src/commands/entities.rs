@@ -2,19 +2,17 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::collections::HashMap;
 use std::fs;
-use std::path::{Path, PathBuf};
+use std::path::Path;
 
-fn claude_dir() -> PathBuf {
-    dirs::home_dir()
-        .expect("could not find home directory")
-        .join(".claude")
-}
+use super::utils;
 
-fn entity_dir(entity_type: &str, scope: &str) -> PathBuf {
+fn entity_dir(entity_type: &str, scope: &str) -> std::path::PathBuf {
     if scope == "global" {
-        claude_dir().join(entity_type)
+        utils::claude_dir().join(entity_type)
     } else {
-        PathBuf::from(scope).join(".claude").join(entity_type)
+        std::path::PathBuf::from(scope)
+            .join(".claude")
+            .join(entity_type)
     }
 }
 

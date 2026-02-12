@@ -4,11 +4,7 @@ use std::fs;
 use std::io::{BufRead, BufReader};
 use std::path::{Path, PathBuf};
 
-fn claude_dir() -> PathBuf {
-    dirs::home_dir()
-        .expect("could not find home directory")
-        .join(".claude")
-}
+use super::utils;
 
 #[derive(Debug, Serialize)]
 pub struct ConversationMeta {
@@ -43,51 +39,11 @@ pub struct HistoryEntry {
     pub timestamp: u64,
 }
 
-fn truncate_str(s: &str, max_chars: usize) -> String {
-    let truncated: String = s.chars().take(max_chars).collect();
-    if truncated.len() < s.len() {
-        format!("{}...", truncated)
-    } else {
-        truncated
-    }
-}
-
-fn extract_text_content(content: &Value) -> String {
-    match content {
-        Value::String(s) => truncate_str(s.trim(), 200),
-        Value::Array(arr) => {
-            for item in arr {
-                if item.get("type").and_then(|t| t.as_str()) == Some("text") {
-                    if let Some(text) = item.get("text").and_then(|t| t.as_str()) {
-                        return truncate_str(text.trim(), 200);
-                    }
-                }
-            }
-            String::new()
-        }
-        _ => String::new(),
-    }
-}
-
 #[tauri::command]
 pub fn list_conversations(project_filter: Option<String>) -> Result<Vec<ConversationMeta>, String> {
-    let projects_dir = claude_dir().join("projects");
-    if !projects_dir.exists() {
-        return Ok(Vec::new());
-    }
+    let project_dirs = utils::list_project_dirs()?;
 
     let mut conversations = Vec::new();
-
-    let project_dirs: Vec<_> = fs::read_dir(&projects_dir)
-        .map_err(|e| e.to_string())?
-        .filter_map(|e| e.ok())
-        .filter(|e| e.file_type().ok().map_or(false, |ft| ft.is_dir()))
-        .filter(|e| {
-            e.file_name()
-                .to_str()
-                .map_or(false, |n| n.starts_with('-'))
-        })
-        .collect();
 
     for project_entry in project_dirs {
         let project_name = project_entry.file_name().to_string_lossy().to_string();
@@ -163,7 +119,7 @@ fn parse_conversation_meta(
             if first_message.is_empty() && msg_type == "user" {
                 if let Some(message) = parsed.get("message") {
                     if let Some(content) = message.get("content") {
-                        first_message = extract_text_content(content);
+                        first_message = utils::extract_text_content(content);
                     }
                 }
                 if let Some(ts) = parsed.get("timestamp").and_then(|t| t.as_str()) {
@@ -225,7 +181,7 @@ pub fn read_conversation(session_path: String) -> Result<Vec<ConversationMessage
         let content = parsed
             .get("message")
             .and_then(|m| m.get("content"))
-            .map(|c| extract_text_content(c))
+            .map(|c| utils::extract_text_content(c))
             .unwrap_or_default();
 
         if content.is_empty() {
@@ -251,25 +207,11 @@ pub fn read_conversation(session_path: String) -> Result<Vec<ConversationMessage
 
 #[tauri::command]
 pub fn search_conversations(query: String, max_results: Option<u32>) -> Result<Vec<SearchResult>, String> {
-    let projects_dir = claude_dir().join("projects");
-    if !projects_dir.exists() {
-        return Ok(Vec::new());
-    }
+    let project_dirs = utils::list_project_dirs()?;
 
     let max = max_results.unwrap_or(50) as usize;
     let query_lower = query.to_lowercase();
     let mut results = Vec::new();
-
-    let project_dirs: Vec<_> = fs::read_dir(&projects_dir)
-        .map_err(|e| e.to_string())?
-        .filter_map(|e| e.ok())
-        .filter(|e| e.file_type().ok().map_or(false, |ft| ft.is_dir()))
-        .filter(|e| {
-            e.file_name()
-                .to_str()
-                .map_or(false, |n| n.starts_with('-'))
-        })
-        .collect();
 
     'outer: for project_entry in project_dirs {
         let project_name = project_entry.file_name().to_string_lossy().to_string();
@@ -317,7 +259,7 @@ pub fn search_conversations(query: String, max_results: Option<u32>) -> Result<V
                 let content = parsed
                     .get("message")
                     .and_then(|m| m.get("content"))
-                    .map(|c| extract_text_content(c))
+                    .map(|c| utils::extract_text_content(c))
                     .unwrap_or_default();
 
                 let timestamp = parsed
@@ -360,7 +302,7 @@ pub fn delete_conversation(session_path: String) -> Result<(), String> {
 
 #[tauri::command]
 pub fn read_command_history(limit: Option<u32>) -> Result<Vec<HistoryEntry>, String> {
-    let path = claude_dir().join("history.jsonl");
+    let path = utils::claude_dir().join("history.jsonl");
     if !path.exists() {
         return Ok(Vec::new());
     }
