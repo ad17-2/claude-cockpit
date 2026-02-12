@@ -2,7 +2,6 @@ use serde::Serialize;
 use serde_json::Value;
 use std::fs;
 use std::io::{BufRead, BufReader};
-use std::path::PathBuf;
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use super::utils;
@@ -142,7 +141,7 @@ pub fn list_active_sessions(threshold_secs: Option<u64>) -> Result<Vec<ActiveSes
 
 #[tauri::command]
 pub fn tail_session(file_path: String, from_line: u32) -> Result<TailResult, String> {
-    let path = PathBuf::from(&file_path);
+    let path = utils::validate_session_path(&file_path)?;
     if !path.exists() {
         return Err(format!("File not found: {}", file_path));
     }

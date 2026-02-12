@@ -65,6 +65,8 @@ pub struct EntityDetail {
 
 #[tauri::command]
 pub fn list_entities(entity_type: String) -> Result<Vec<EntityInfo>, String> {
+    utils::validate_entity_type(&entity_type)?;
+
     let mut entities = Vec::new();
 
     let dir = entity_dir(&entity_type, "global");
@@ -124,6 +126,10 @@ pub fn read_entity(
     scope: String,
     name: String,
 ) -> Result<EntityDetail, String> {
+    utils::validate_entity_type(&entity_type)?;
+    utils::validate_scope(&scope)?;
+    utils::validate_safe_name(&name)?;
+
     let dir = entity_dir(&entity_type, &scope);
     let path = dir.join(format!("{}.md", name));
 
@@ -150,6 +156,10 @@ pub fn write_entity(
     name: String,
     content: String,
 ) -> Result<(), String> {
+    utils::validate_entity_type(&entity_type)?;
+    utils::validate_scope(&scope)?;
+    utils::validate_safe_name(&name)?;
+
     let dir = entity_dir(&entity_type, &scope);
     fs::create_dir_all(&dir).map_err(|e| e.to_string())?;
 
@@ -163,6 +173,10 @@ pub fn delete_entity(
     scope: String,
     name: String,
 ) -> Result<(), String> {
+    utils::validate_entity_type(&entity_type)?;
+    utils::validate_scope(&scope)?;
+    utils::validate_safe_name(&name)?;
+
     let dir = entity_dir(&entity_type, &scope);
     let path = dir.join(format!("{}.md", name));
 

@@ -115,6 +115,10 @@
   async function handleCreate(): Promise<void> {
     const trimmed = newName.trim();
     if (!trimmed) return;
+    if (trimmed.includes('/') || trimmed.includes('\\') || trimmed.includes('..') || trimmed.startsWith('.')) {
+      error = "Invalid name: cannot contain path separators or start with a dot";
+      return;
+    }
     const template = getTemplate(activeType);
     const content = template.replace(/^(name: )$/m, `name: ${trimmed}`);
     await writeEntity(activeType, "global", trimmed, content);

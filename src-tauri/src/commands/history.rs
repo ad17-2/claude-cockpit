@@ -2,7 +2,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::fs;
 use std::io::{BufRead, BufReader, Write};
-use std::path::{Path, PathBuf};
+use std::path::Path;
 
 use super::utils;
 
@@ -132,7 +132,7 @@ fn parse_conversation_meta(
 
 #[tauri::command]
 pub fn read_conversation(session_path: String) -> Result<Vec<ConversationMessage>, String> {
-    let path = PathBuf::from(&session_path);
+    let path = utils::validate_session_path(&session_path)?;
     if !path.exists() {
         return Err(format!("File not found: {}", session_path));
     }
@@ -280,7 +280,8 @@ fn remove_session(path: &Path) -> Result<(), String> {
 
 #[tauri::command]
 pub fn delete_conversation(session_path: String) -> Result<(), String> {
-    remove_session(&PathBuf::from(&session_path))
+    let path = utils::validate_session_path(&session_path)?;
+    remove_session(&path)
 }
 
 #[tauri::command]

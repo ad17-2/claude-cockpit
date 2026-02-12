@@ -65,7 +65,8 @@ pub fn delete_project(encoded_path: String) -> Result<(), String> {
         return Ok(());
     }
 
-    fs::remove_dir_all(&project_dir).map_err(|e| e.to_string())
+    let canonical = utils::validate_within_projects_dir(&project_dir)?;
+    fs::remove_dir_all(&canonical).map_err(|e| e.to_string())
 }
 
 #[cfg(test)]

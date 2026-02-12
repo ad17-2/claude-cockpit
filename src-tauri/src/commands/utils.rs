@@ -92,3 +92,145 @@ pub fn list_project_dirs() -> Result<Vec<fs::DirEntry>, String> {
         .collect();
     Ok(entries)
 }
+
+const ALLOWED_ENTITY_TYPES: &[&str] = &["agents", "rules", "commands", "skills", "hooks"];
+
+pub fn validate_entity_type(entity_type: &str) -> Result<(), String> {
+    if ALLOWED_ENTITY_TYPES.contains(&entity_type) {
+        Ok(())
+    } else {
+        Err(format!("Invalid entity type: {}", entity_type))
+    }
+}
+
+pub fn validate_safe_name(name: &str) -> Result<(), String> {
+    if name.is_empty() {
+        return Err("Name cannot be empty".to_string());
+    }
+    if name.contains('/') || name.contains('\\') || name.contains("..") {
+        return Err("Name contains invalid characters".to_string());
+    }
+    if name.starts_with('.') {
+        return Err("Name cannot start with a dot".to_string());
+    }
+    Ok(())
+}
+
+pub fn validate_scope(scope: &str) -> Result<(), String> {
+    if scope == "global" {
+        return Ok(());
+    }
+    let path = PathBuf::from(scope);
+    if !path.is_absolute() {
+        return Err("Scope must be 'global' or an absolute path".to_string());
+    }
+    if scope.contains("..") {
+        return Err("Scope contains invalid path components".to_string());
+    }
+    Ok(())
+}
+
+fn canonicalize_within_projects_dir(path: &Path) -> Result<PathBuf, String> {
+    let canonical = path
+        .canonicalize()
+        .map_err(|_| format!("Invalid path: {}", path.display()))?;
+
+    let projects = projects_dir()
+        .canonicalize()
+        .map_err(|_| "Cannot resolve projects directory".to_string())?;
+
+    if !canonical.starts_with(&projects) {
+        return Err("Path outside allowed directory".to_string());
+    }
+
+    Ok(canonical)
+}
+
+pub fn validate_session_path(session_path: &str) -> Result<PathBuf, String> {
+    let path = PathBuf::from(session_path);
+    if !path.is_absolute() {
+        return Err("Session path must be absolute".to_string());
+    }
+
+    let canonical = canonicalize_within_projects_dir(&path)?;
+
+    if canonical.extension().and_then(|e| e.to_str()) != Some("jsonl") {
+        return Err("Invalid file type".to_string());
+    }
+
+    Ok(canonical)
+}
+
+pub fn validate_within_projects_dir(path: &Path) -> Result<PathBuf, String> {
+    canonicalize_within_projects_dir(path)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_validate_entity_type_accepts_allowed() {
+        for t in ALLOWED_ENTITY_TYPES {
+            assert!(validate_entity_type(t).is_ok());
+        }
+    }
+
+    #[test]
+    fn test_validate_entity_type_rejects_unknown() {
+        assert!(validate_entity_type("malicious").is_err());
+        assert!(validate_entity_type("").is_err());
+        assert!(validate_entity_type("../agents").is_err());
+    }
+
+    #[test]
+    fn test_validate_safe_name_accepts_valid() {
+        assert!(validate_safe_name("my-agent").is_ok());
+        assert!(validate_safe_name("rule_v2").is_ok());
+        assert!(validate_safe_name("CamelCase").is_ok());
+    }
+
+    #[test]
+    fn test_validate_safe_name_rejects_empty() {
+        assert!(validate_safe_name("").is_err());
+    }
+
+    #[test]
+    fn test_validate_safe_name_rejects_path_separators() {
+        assert!(validate_safe_name("../etc/passwd").is_err());
+        assert!(validate_safe_name("foo/bar").is_err());
+        assert!(validate_safe_name("foo\\bar").is_err());
+    }
+
+    #[test]
+    fn test_validate_safe_name_rejects_dot_prefix() {
+        assert!(validate_safe_name(".hidden").is_err());
+        assert!(validate_safe_name("..sneaky").is_err());
+    }
+
+    #[test]
+    fn test_validate_scope_accepts_global() {
+        assert!(validate_scope("global").is_ok());
+    }
+
+    #[test]
+    fn test_validate_scope_accepts_absolute_path() {
+        assert!(validate_scope("/Users/test/project").is_ok());
+    }
+
+    #[test]
+    fn test_validate_scope_rejects_relative_path() {
+        assert!(validate_scope("relative/path").is_err());
+        assert!(validate_scope("").is_err());
+    }
+
+    #[test]
+    fn test_validate_scope_rejects_traversal() {
+        assert!(validate_scope("/Users/test/../etc").is_err());
+    }
+
+    #[test]
+    fn test_validate_session_path_rejects_relative() {
+        assert!(validate_session_path("relative/file.jsonl").is_err());
+    }
+}

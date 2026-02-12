@@ -37,12 +37,14 @@ fn merge_json(base: &Value, overlay: &Value) -> Value {
 
 #[tauri::command]
 pub fn read_settings(scope: String, file_type: String) -> Result<Value, String> {
+    utils::validate_scope(&scope)?;
     let path = settings_path(&scope, &file_type);
     utils::read_json_file(&path)
 }
 
 #[tauri::command]
 pub fn write_settings(scope: String, file_type: String, content: Value) -> Result<(), String> {
+    utils::validate_scope(&scope)?;
     let path = settings_path(&scope, &file_type);
 
     if let Some(parent) = path.parent() {
@@ -59,6 +61,7 @@ pub fn write_settings(scope: String, file_type: String, content: Value) -> Resul
 
 #[tauri::command]
 pub fn get_effective_settings(project_path: String) -> Result<Value, String> {
+    utils::validate_scope(&project_path)?;
     let global_settings = utils::read_json_file(&settings_path("global", "settings"))?;
     let global_local = utils::read_json_file(&settings_path("global", "settings_local"))?;
     let project_settings = utils::read_json_file(&settings_path(&project_path, "settings"))?;
@@ -78,6 +81,7 @@ pub fn add_permission(
     category: String,
     permission: String,
 ) -> Result<(), String> {
+    utils::validate_scope(&scope)?;
     let path = settings_path(&scope, &file_type);
     let mut settings = utils::read_json_file(&path)?;
 
@@ -118,6 +122,7 @@ pub fn remove_permission(
     category: String,
     permission: String,
 ) -> Result<(), String> {
+    utils::validate_scope(&scope)?;
     let path = settings_path(&scope, &file_type);
     let mut settings = utils::read_json_file(&path)?;
 

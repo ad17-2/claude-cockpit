@@ -27,6 +27,8 @@ fn project_claude_md_write_path(project_path: &str) -> PathBuf {
 
 #[tauri::command]
 pub fn read_claude_md(scope: String) -> Result<Option<String>, String> {
+    utils::validate_scope(&scope)?;
+
     let path = if scope == "global" {
         global_claude_md_path()
     } else {
@@ -44,6 +46,8 @@ pub fn read_claude_md(scope: String) -> Result<Option<String>, String> {
 
 #[tauri::command]
 pub fn write_claude_md(scope: String, content: String) -> Result<(), String> {
+    utils::validate_scope(&scope)?;
+
     let path = if scope == "global" {
         global_claude_md_path()
     } else {
